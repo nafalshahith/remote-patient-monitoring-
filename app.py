@@ -8,34 +8,29 @@ st.set_page_config(page_title="Remote Patient Monitoring", layout="wide")
 st.title("🏥 Remote Patient Monitoring Dashboard")
 st.markdown("Live monitoring of patient vitals with AI risk prediction")
 
-# Session state
+# Initialize session state
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame()
+if "run" not in st.session_state:
+    st.session_state.run = True
 
 # Sidebar controls
 st.sidebar.header("Controls")
 num_patients = st.sidebar.slider("Number of Patients", 1, 10, 5)
-refresh_rate = st.sidebar.slider("Refresh Rate (seconds)", 1, 5, 2)
+refresh_rate = st.sidebar.slider("Refresh Rate (seconds)", 2, 10, 5)
 
-# Generate new data
-new_data = stream_data(num_patients)
-new_data["Risk Level"] = new_data.apply(predict_risk, axis=1)
+# Generate data ONLY once per refresh
+if st.session_state.run:
+    new_data = stream_data(num_patients)
+    new_data["Risk Level"] = new_data.apply(predict_risk, axis=1)
 
-# Append history
-st.session_state.data = pd.concat(
-    [st.session_state.data, new_data]
-).tail(300)
+    st.session_state.data = pd.concat(
+        [st.session_state.data, new_data]
+    ).tail(300)
 
-st.session_state.data["timestamp"] = pd.to_datetime(
-    st.session_state.data["timestamp"]
-)
-
-# Auto-refresh (SAFE WAY)
-st.experimental_autorefresh(interval=refresh_rate * 1000, key="refresh")
-
-# ---- UI ----
+# UI
 st.subheader("📊 Live Patient Vitals")
-st.dataframe(new_data, use_container_width=True)
+st.dataframe(st.session_state.data.tail(num_patients), use_container_width=True)
 
 col1, col2 = st.columns(2)
 
@@ -61,7 +56,9 @@ with col2:
 
 # Alerts
 st.subheader("🚨 Alerts")
-alerts = new_data[new_data["Risk Level"] == "High Risk"]
+alerts = st.session_state.data[
+    st.session_state.data["Risk Level"] == "High Risk"
+]
 
 if not alerts.empty:
     st.error("⚠ CRITICAL PATIENT ALERTS!")
@@ -69,3 +66,7 @@ if not alerts.empty:
 else:
     st.success("All patients stable ✅")
 
+# Controlled refresh
+st.session_state.run = False
+st.experimental_autorefresh(interval=refresh_rate * 1000, key="refresh")
+st.session_state.run = True
