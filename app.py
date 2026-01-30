@@ -6,10 +6,10 @@ from riskmode import predict_risk
 st.set_page_config(page_title="Remote Patient Monitoring", layout="wide")
 
 st.title("🏥 Remote Patient Monitoring Dashboard")
-st.markdown("Live simulated patient vitals (auto-refresh every 2 seconds)")
+st.markdown("Live simulated patient vitals (refreshes every 2 seconds)")
 
-# ---- AUTO REFRESH (THIS IS THE KEY) ----
-st.experimental_autorefresh(interval=2000, key="live")
+# ---- AUTO REFRESH (UPDATED API) ----
+st.autorefresh(interval=2000, key="live")
 
 # ---- SESSION STATE INIT ----
 if "data" not in st.session_state:
@@ -18,7 +18,7 @@ if "data" not in st.session_state:
 # ---- CONTROLS ----
 num_patients = st.sidebar.slider("Number of Patients", 1, 10, 5)
 
-# ---- GENERATE NEW DATA ON EVERY REFRESH ----
+# ---- GENERATE DATA ON EVERY REFRESH ----
 new_data = stream_data(num_patients)
 new_data["Risk Level"] = new_data.apply(predict_risk, axis=1)
 
@@ -27,11 +27,11 @@ st.session_state.data = pd.concat(
     ignore_index=True
 ).tail(300)
 
-# ---- DISPLAY SNAPSHOT ----
+# ---- CURRENT SNAPSHOT ----
 st.subheader("📊 Current Vitals")
 st.dataframe(new_data, use_container_width=True)
 
-# ---- CHARTS ----
+# ---- LIVE CHARTS ----
 col1, col2 = st.columns(2)
 
 with col1:
