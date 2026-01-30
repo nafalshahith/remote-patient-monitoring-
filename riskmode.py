@@ -14,3 +14,4 @@ def predict_risk(row):
         return "Medium Risk"
     else:
         return "High Risk"
+
