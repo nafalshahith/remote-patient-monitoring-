@@ -37,16 +37,20 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("❤️ Heart Rate (Live)")
-    st.line_chart(
-        st.session_state.data.pivot(
-            index="timestamp",
-            columns="patient_id",
-            values="heart_rate"
-        )
+    hr_df = st.session_state.data.pivot(
+        index="timestamp",
+        columns="patient_id",
+        values="heart_rate"
     )
+    st.line_chart(hr_df)
+
 
 with col2:
     st.subheader("🫁 SpO₂ (Live)")
-    st.line_chart(
-        st.session_state.data.pivot(
-            index="timestamp",
+    spo2_df = st.session_state.data.pivot(
+        index="timestamp",
+        columns="patient_id",
+        values="spo2"
+    )
+    st.line_chart(spo2_df)
+
