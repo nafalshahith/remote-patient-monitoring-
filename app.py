@@ -1,72 +1,66 @@
 import streamlit as st
+import time
 import pandas as pd
 from datagen import stream_data
 from riskmode import predict_risk
-import streamlit.components.v1 as components
-
-# ---- FORCE PAGE REFRESH EVERY 2 SECONDS ----
-components.html(
-    """
-    <script>
-        setTimeout(function(){
-            window.location.reload();
-        }, 2000);
-    </script>
-    """,
-    height=0,
-)
 
 st.set_page_config(page_title="Remote Patient Monitoring", layout="wide")
 
 st.title("🏥 Remote Patient Monitoring Dashboard")
-st.markdown("Live simulated patient vitals (updates every 2 seconds)")
+st.markdown("Live monitoring of patient vitals with AI risk prediction")
 
-# ---- SESSION STATE ----
+# Session state to store streaming data
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame()
 
-# ---- CONTROLS ----
+# Sidebar controls
+st.sidebar.header("Controls")
 num_patients = st.sidebar.slider("Number of Patients", 1, 10, 5)
+refresh_rate = st.sidebar.slider("Refresh Rate (seconds)", 1, 5, 2)
 
-# ---- GENERATE NEW DATA ON EVERY RELOAD ----
-new_data = stream_data(num_patients)
-new_data["Risk Level"] = new_data.apply(predict_risk, axis=1)
+placeholder = st.empty()
 
-st.session_state.data = pd.concat(
-    [st.session_state.data, new_data],
-    ignore_index=True
-).tail(300)
+while True:
+    new_data = stream_data(num_patients)
+    new_data["Risk Level"] = new_data.apply(predict_risk, axis=1)
 
-# ---- CURRENT SNAPSHOT ----
-st.subheader("📊 Current Vitals")
-st.dataframe(new_data, use_container_width=True)
+    st.session_state.data = pd.concat(
+        [st.session_state.data, new_data]
+    ).tail(200)
 
-# ---- LIVE CHARTS ----
-col1, col2 = st.columns(2)
+    with placeholder.container():
+        st.subheader("📊 Live Patient Vitals")
+        st.dataframe(new_data, use_container_width=True)
 
-with col1:
-    st.subheader("❤️ Heart Rate (Live)")
-    hr_df = st.session_state.data.pivot(
-        index="timestamp",
-        columns="patient_id",
-        values="heart_rate"
-    )
-    st.line_chart(hr_df)
+        col1, col2 = st.columns(2)
 
-with col2:
-    st.subheader("🫁 SpO₂ (Live)")
-    spo2_df = st.session_state.data.pivot(
-        index="timestamp",
-        columns="patient_id",
-        values="spo2"
-    )
-    st.line_chart(spo2_df)
+        with col1:
+            st.subheader("❤️ Heart Rate")
+            st.line_chart(
+                st.session_state.data.pivot(
+                    index="timestamp",
+                    columns="patient_id",
+                    values="heart_rate"
+                )
+            )
 
-# ---- ALERTS ----
-st.subheader("🚨 Live Alerts")
-alerts = st.session_state.data[
-    st.session_state.data["Risk Level"] == "High Risk"
-]
+        with col2:
+            st.subheader("🫁 SpO2 Levels")
+            st.line_chart(
+                st.session_state.data.pivot(
+                    index="timestamp",
+                    columns="patient_id",
+                    values="spo2"
+                )
+            )
 
-if not alerts.empty:
-    st.error("⚠ High Ri
+        st.subheader("🚨 Alerts")
+        alerts = new_data[new_data["Risk Level"] == "High Risk"]
+
+        if not alerts.empty:
+            st.error("⚠ CRITICAL PATIENT ALERTS!")
+            st.dataframe(alerts, use_container_width=True)
+        else:
+            st.success("All patients stable ✅")
+
+    time.sleep(refresh_rate)
