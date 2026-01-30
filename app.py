@@ -1,15 +1,7 @@
 import streamlit as st
+import datagen
+import riskmode
 
-st.title("Import Test")
+st.title("✅ Imports Working")
+st.success("datagen and riskmode loaded correctly")
 
-try:
-    import datagen
-    st.success("datagen.py imported successfully")
-except Exception as e:
-    st.error(f"datagen error: {e}")
-
-try:
-    import riskmode
-    st.success("riskmode.py imported successfully")
-except Exception as e:
-    st.error(f"riskmode error: {e}")
