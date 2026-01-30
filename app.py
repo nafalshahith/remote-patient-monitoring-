@@ -1,16 +1,25 @@
 import streamlit as st
 import pandas as pd
-from streamlit_extras.st_autorefresh import st_autorefresh
 from datagen import stream_data
 from riskmode import predict_risk
+import streamlit.components.v1 as components
+
+# ---- FORCE PAGE REFRESH EVERY 2 SECONDS ----
+components.html(
+    """
+    <script>
+        setTimeout(function(){
+            window.location.reload();
+        }, 2000);
+    </script>
+    """,
+    height=0,
+)
 
 st.set_page_config(page_title="Remote Patient Monitoring", layout="wide")
 
 st.title("🏥 Remote Patient Monitoring Dashboard")
 st.markdown("Live simulated patient vitals (updates every 2 seconds)")
-
-# ---- AUTO REFRESH (STABLE) ----
-st_autorefresh(interval=2000, key="live")
 
 # ---- SESSION STATE ----
 if "data" not in st.session_state:
@@ -19,7 +28,7 @@ if "data" not in st.session_state:
 # ---- CONTROLS ----
 num_patients = st.sidebar.slider("Number of Patients", 1, 10, 5)
 
-# ---- GENERATE DATA EVERY REFRESH ----
+# ---- GENERATE NEW DATA ON EVERY RELOAD ----
 new_data = stream_data(num_patients)
 new_data["Risk Level"] = new_data.apply(predict_risk, axis=1)
 
@@ -44,7 +53,6 @@ with col1:
     )
     st.line_chart(hr_df)
 
-
 with col2:
     st.subheader("🫁 SpO₂ (Live)")
     spo2_df = st.session_state.data.pivot(
@@ -54,3 +62,11 @@ with col2:
     )
     st.line_chart(spo2_df)
 
+# ---- ALERTS ----
+st.subheader("🚨 Live Alerts")
+alerts = st.session_state.data[
+    st.session_state.data["Risk Level"] == "High Risk"
+]
+
+if not alerts.empty:
+    st.error("⚠ High Ri
