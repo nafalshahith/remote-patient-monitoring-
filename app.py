@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import time
 from datagen import stream_data
 from riskmode import predict_risk
 
@@ -12,18 +13,17 @@ st.markdown("Simulated live patient vitals with risk assessment")
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame()
 if "last_run" not in st.session_state:
-    st.session_state.last_run = 0
+    st.session_state.last_run = 0.0
 
 # Sidebar
 st.sidebar.header("Controls")
 num_patients = st.sidebar.slider("Number of Patients", 1, 10, 5)
 refresh_rate = st.sidebar.slider("Refresh every (seconds)", 3, 10, 5)
 
-# Trigger refresh safely
-if st.session_state.last_run == 0:
-    st.session_state.last_run = st.time()
+# Controlled live simulation
+current_time = time.time()
 
-if st.time() - st.session_state.last_run >= refresh_rate:
+if current_time - st.session_state.last_run >= refresh_rate:
     new_data = stream_data(num_patients)
     new_data["Risk Level"] = new_data.apply(predict_risk, axis=1)
 
@@ -32,12 +32,15 @@ if st.time() - st.session_state.last_run >= refresh_rate:
         ignore_index=True
     ).tail(300)
 
-    st.session_state.last_run = st.time()
+    st.session_state.last_run = current_time
 
-# UI
+# UI rendering
 if not st.session_state.data.empty:
     st.subheader("📊 Live Patient Snapshot")
-    st.dataframe(st.session_state.data.tail(num_patients), use_container_width=True)
+    st.dataframe(
+        st.session_state.data.tail(num_patients),
+        use_container_width=True
+    )
 
     col1, col2 = st.columns(2)
 
@@ -75,7 +78,3 @@ if not st.session_state.data.empty:
         st.success("All patients stable ✅")
 else:
     st.info("Initializing live simulation…")
-
-
-
-
